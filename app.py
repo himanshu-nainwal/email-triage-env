@@ -26,11 +26,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Single shared environment instance (stateful per session)
 env = EmailTriageEnv()
 
-
-# ── Request / Response schemas ────────────────────────────────────────────────
 
 class ResetRequest(BaseModel):
     task_id: str = "task_easy"
@@ -43,21 +40,9 @@ class StepResponse(BaseModel):
     info: dict
 
 
-# ── Endpoints ─────────────────────────────────────────────────────────────────
-
 @app.get("/health")
 def health():
     return {"status": "ok", "environment": "email-triage-env", "version": "1.0.0"}
-
-
-@app.post("/reset", response_model=Observation)
-def reset(request: ResetRequest):
-    """Reset the environment and return the first observation."""
-    try:
-        obs = env.reset(task_id=request.task_id)
-        return obs
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.post("/reset", response_model=Observation)
@@ -70,47 +55,35 @@ def reset(request: Optional[ResetRequest] = None):
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@app.post("/step", response_model=StepResponse)
+def step(action: Action):
+    try:
+        obs, reward, done, info = env.step(action)
+        return StepResponse(observation=obs, reward=reward, done=done, info=info)
+    except RuntimeError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @app.get("/state", response_model=EnvironmentState)
 def state():
-    """Return the current internal environment state."""
     return env.state()
 
 
 @app.get("/score")
 def score():
-    """Return the current episode mean score."""
     return {"episode_score": env.episode_score(), "scores": env.state().scores}
 
 
 @app.get("/tasks")
 def list_tasks():
-    """List available tasks."""
     return {
         "tasks": [
-            {
-                "id": "task_easy",
-                "name": "Email Classification",
-                "difficulty": "easy",
-                "description": "Classify emails into correct categories",
-                "max_steps": 10,
-                "num_emails": 5,
-            },
-            {
-                "id": "task_medium",
-                "name": "Priority + Classification",
-                "difficulty": "medium",
-                "description": "Correctly classify AND prioritize emails",
-                "max_steps": 15,
-                "num_emails": 5,
-            },
-            {
-                "id": "task_hard",
-                "name": "Full Triage with Reply",
-                "difficulty": "hard",
-                "description": "Classify, prioritize, escalate, AND draft a reply",
-                "max_steps": 20,
-                "num_emails": 5,
-            },
+            {"id": "task_easy", "name": "Email Classification", "difficulty": "easy",
+             "description": "Classify emails into correct categories", "max_steps": 10, "num_emails": 5},
+            {"id": "task_medium", "name": "Priority + Classification", "difficulty": "medium",
+             "description": "Correctly classify AND prioritize emails", "max_steps": 15, "num_emails": 5},
+            {"id": "task_hard", "name": "Full Triage with Reply", "difficulty": "hard",
+             "description": "Classify, prioritize, escalate, AND draft a reply", "max_steps": 20, "num_emails": 5},
         ]
     }
 
