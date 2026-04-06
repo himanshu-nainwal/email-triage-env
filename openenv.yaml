@@ -1,0 +1,67 @@
+name: email-triage-env
+version: "1.0.0"
+description: >
+  A real-world email triage environment where an AI agent must classify,
+  prioritize, and draft appropriate responses to business emails.
+  Simulates a support/operations inbox with escalation logic.
+author: openenv-submission
+tags:
+  - openenv
+  - email
+  - triage
+  - nlp
+  - business
+  - real-world
+
+observation_space:
+  type: object
+  description: Current email in the inbox along with context
+  fields:
+    email_id: string
+    subject: string
+    body: string
+    sender: string
+    timestamp: string
+    thread_history: list[string]
+    inbox_metadata:
+      total_emails: int
+      current_index: int
+
+action_space:
+  type: object
+  description: Agent action — classify, prioritize, and optionally draft a reply
+  fields:
+    category:
+      type: string
+      enum: [billing, technical, general, spam, urgent]
+    priority:
+      type: string
+      enum: [low, medium, high, critical]
+    reply_draft:
+      type: string
+      description: Optional reply text the agent drafts
+    escalate:
+      type: boolean
+      description: Whether to escalate to a human agent
+
+tasks:
+  - id: task_easy
+    name: Email Classification
+    difficulty: easy
+    description: Classify emails into correct categories
+    max_steps: 10
+
+  - id: task_medium
+    name: Priority + Classification
+    difficulty: medium
+    description: Correctly classify AND prioritize emails with nuanced signals
+    max_steps: 15
+
+  - id: task_hard
+    name: Full Triage with Reply
+    difficulty: hard
+    description: Classify, prioritize, escalate correctly, AND draft an appropriate reply
+    max_steps: 20
+
+reward_range: [0.0, 1.0]
+episode_termination: All emails in the task batch processed or max_steps exceeded
