@@ -60,13 +60,13 @@ def reset(request: ResetRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/step", response_model=StepResponse)
-def step(action: Action):
-    """Submit an action and receive the next observation + reward."""
+@app.post("/reset", response_model=Observation)
+def reset(request: Optional[ResetRequest] = None):
     try:
-        obs, reward, done, info = env.step(action)
-        return StepResponse(observation=obs, reward=reward, done=done, info=info)
-    except RuntimeError as e:
+        task_id = request.task_id if request else "task_easy"
+        obs = env.reset(task_id=task_id)
+        return obs
+    except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
